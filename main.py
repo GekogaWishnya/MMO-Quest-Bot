@@ -1,0 +1,169 @@
+import regex
+import time
+from random import uniform
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException, NoSuchElementException
+from statemachine import StateMachine, State, Event
+from statemachine.transition_list import TransitionList
+from statemachine.exceptions import TransitionNotAllowed
+
+
+LOGIN = "Player_1369417"
+PASSWORD = "688025"
+MOB = "Бандит"
+REGEX = r"\p{L}+"
+
+
+def is_error_page() -> bool:
+    return "https://mmoquest.com/disconnect.php" in driver.current_url
+
+
+def is_login() -> bool:
+    try:
+        driver.find_element(By.CLASS_NAME, "login")
+        return True
+    except NoSuchElementException:
+        return False
+
+
+def is_main_menu() -> bool:
+    try:
+        driver.find_element(By.CLASS_NAME, "perg_text")
+        return True
+    except NoSuchElementException:
+        return False
+
+
+def is_hunt_list() -> bool:
+    try:
+        driver.find_element(By.XPATH, "//img[@src='/mmoqimage/icond_1/powerHD.png']")
+        return True
+    except NoSuchElementException:
+        return False
+
+
+def is_fight_scene() -> bool:
+    try:
+        element = driver.find_element(By.XPATH, "//canvas[1]")
+        return float(element.get_attribute("width")) > 0
+    except NoSuchElementException:
+        return False
+
+
+def is_loot_table() -> bool:
+    try:
+        driver.find_element(By.CLASS_NAME, "win_prize")
+        return True
+    except NoSuchElementException:
+        try:
+            driver.find_element(By.CLASS_NAME, "win_prize_money")
+            return True
+        except NoSuchElementException:
+            return False
+
+
+def open_page():
+    driver.get("https://mmoquest.com")
+    assert "Mobitva" in driver.title, "Possibly wrong web page."
+
+
+def reconnect():
+    try:
+        wait.until(EC.visibility_of_element_located((By.XPATH, "//div[@class='LButtonFlex']/button[1]"))).click()
+    except TimeoutException:
+        pass
+
+
+def login():
+    try:
+        field = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "login")))
+        field.clear()
+        field.send_keys(LOGIN)
+        driver.implicitly_wait(uniform(0.3, 0.7))
+        field = driver.find_element(By.ID, "password-input")
+        field.clear()
+        field.send_keys(PASSWORD)
+        driver.implicitly_wait(uniform(0.3, 0.7))
+        driver.find_element(By.CLASS_NAME, "button_auth").click()
+    except TimeoutException:
+        pass
+
+
+def go_hunt_from_main_menu():
+    try:
+        wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "perg_text")))
+        driver.execute_script("showContent('/hunt/');")
+    except TimeoutException:
+        pass
+
+
+def choose_mob():
+    try:
+        wait.until(EC.visibility_of_element_located((By.XPATH, "//img[@src='/mmoqimage/icond_1/powerHD.png']")))
+        mobs = driver.find_elements(By.CLASS_NAME, "attackButtons")
+        for i in range(len(mobs)):
+            mob_name = ' '.join(regex.findall(REGEX, mobs[i].text))
+            if mob_name == MOB:
+                mobs[i + 1].click()
+
+    except TimeoutException:
+        pass
+
+
+def enable_auto():
+    try:
+        wait.until(EC.visibility_of_element_located((By.XPATH, "//canvas[1]")))
+        driver.execute_script("mmobtl.setAuto(1);")
+    except TimeoutException:
+        pass
+
+
+def exit_loot():
+    try:
+        wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "win_prize")))
+        driver.execute_script("showContent('/main.php', true);")
+    except TimeoutException:
+        pass
+
+
+class MMOBOT(StateMachine, strict_states=True):
+    initial = State("Initial", value=0, initial=True, enter=open_page)
+    error_page = State("Error", value=2, enter=reconnect)
+    login_page = State("Login", value=3, enter=login)
+    main_menu = State("Main menu", value=4, enter=go_hunt_from_main_menu)
+    hunt_list = State("Hunt list", value=5, enter=choose_mob)
+    fight_scene = State("Fight", value=6, enter=enable_auto)
+    loot_table = State("Fight", value=7, enter=exit_loot)
+
+    transitions = TransitionList()
+    transitions.add_transitions(error_page.from_(initial, login_page, main_menu, hunt_list, fight_scene, loot_table, cond=is_error_page))
+    transitions.add_transitions(login_page.from_(initial, error_page, main_menu, hunt_list, fight_scene, loot_table, cond=is_login))
+    transitions.add_transitions(main_menu.from_(initial, error_page, login_page, hunt_list, fight_scene, loot_table, cond=is_main_menu))
+    transitions.add_transitions(hunt_list.from_(initial, error_page, login_page, main_menu, cond=is_hunt_list))
+    transitions.add_transitions(fight_scene.from_(initial, error_page, login_page, hunt_list, cond=is_fight_scene))
+    transitions.add_transitions(loot_table.from_(initial, error_page, login_page, fight_scene, cond=is_loot_table))
+    loop = Event(transitions, name="Loop")
+
+    def on_enter_state(self, event, state):
+        print(f"Entering '{state.id}' state.")
+
+
+if __name__ == "__main__":
+    options = Options()
+    options.set_preference("media.volume_scale", "0.0")
+    driver = webdriver.Firefox(options=options)
+
+    wait = WebDriverWait(driver, 10, 1)
+
+    bot = MMOBOT()
+    while True:
+        try:
+            bot.loop()
+        except TransitionNotAllowed:
+            driver.implicitly_wait(uniform(1.0, 2.0))
+
+        driver.implicitly_wait(uniform(0.5, 1.0))
