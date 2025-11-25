@@ -87,7 +87,6 @@ def is_loot_table() -> bool:
 
 def open_page():
     driver.get("https://mmoquest.com")
-    assert "Mobitva" in driver.title, "Possibly wrong web page."
 
 
 def reconnect():
@@ -180,8 +179,8 @@ class MMOBOT(StateMachine, strict_states=True):
     transitions = TransitionList()
     transitions.add_transitions(error_page.from_(initial, login_page, msg_window, daily_msg_window, main_menu, hunt_list, fight_scene, loot_table, cond=is_error_page))
     transitions.add_transitions(login_page.from_(initial, error_page, msg_window, daily_msg_window, main_menu, hunt_list, fight_scene, loot_table, cond=is_login))
-    transitions.add_transitions(msg_window.from_(initial, error_page, login_page, daily_msg_window, main_menu, hunt_list, fight_scene, loot_table, cond=is_msg_window))
-    transitions.add_transitions(daily_msg_window.from_(initial, error_page, login_page, msg_window, main_menu, hunt_list, fight_scene, loot_table, cond=is_daily_msg_window))
+    transitions.add_transitions(msg_window.from_(error_page, daily_msg_window, main_menu, hunt_list, fight_scene, loot_table, cond=is_msg_window))
+    transitions.add_transitions(daily_msg_window.from_(error_page, login_page, msg_window, main_menu, hunt_list, fight_scene, loot_table, cond=is_daily_msg_window))
     transitions.add_transitions(main_menu.from_(initial, error_page, login_page, msg_window, daily_msg_window, hunt_list, fight_scene, loot_table, cond=is_main_menu))
     transitions.add_transitions(hunt_list.from_(initial, error_page, login_page, msg_window, daily_msg_window, main_menu, cond=is_hunt_list))
     transitions.add_transitions(fight_scene.from_(initial, error_page, login_page, msg_window, daily_msg_window, hunt_list, cond=is_fight_scene))
@@ -194,6 +193,7 @@ class MMOBOT(StateMachine, strict_states=True):
 
 if __name__ == "__main__":
     options = Options()
+    # options.add_argument("--headless")
     options.set_preference("media.volume_scale", "0.0")
     driver = webdriver.Firefox(options=options)
 
