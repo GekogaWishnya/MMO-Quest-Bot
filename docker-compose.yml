@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  mmo-bot:
+    build: .
+    container_name: mmo-quest-bot
+    restart: unless-stopped
+    environment:
+      - MOZ_HEADLESS=1
+      - DISPLAY=:99
+    volumes:
+      # Монтируем файлы для возможности изменения без пересборки
+      - ./main.py:/app/main.py:ro
+      - ./requirements.txt:/app/requirements.txt:ro
+    
+ 
