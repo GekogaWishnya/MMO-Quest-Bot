@@ -5,6 +5,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import (ElementClickInterceptedException, TimeoutException, NoSuchElementException,
@@ -198,7 +199,10 @@ if __name__ == "__main__":
     options = Options()
     # options.add_argument("--headless")
     options.set_preference("media.volume_scale", "0.0")
-    driver = webdriver.Firefox(options=options)
+
+    # Явно указываем путь к geckodriver для обхода Selenium Manager (для ARCH архитектуры)
+    service = Service(executable_path="/usr/local/bin/geckodriver")
+    driver = webdriver.Firefox(service=service, options=options)
 
     wait = WebDriverWait(driver, 10, 1)
 

@@ -7,18 +7,23 @@ RUN apt-get update && apt-get install -y \
     unzip \
     curl \
     xvfb \
-    && rm -rf /var/lib/apt/lists/*
-
-# Установка Firefox ESR
-RUN apt-get update && apt-get install -y \
     firefox-esr \
     && rm -rf /var/lib/apt/lists/*
 
-# Установка geckodriver
-RUN GECKODRIVER_VERSION=$(curl -s https://api.github.com/repos/mozilla/geckodriver/releases/latest | grep -Po '"tag_name": "\K.*?(?=")') && \
-    wget -q "https://github.com/mozilla/geckodriver/releases/download/${GECKODRIVER_VERSION}/geckodriver-${GECKODRIVER_VERSION}-linux64.tar.gz" && \
-    tar -xzf "geckodriver-${GECKODRIVER_VERSION}-linux64.tar.gz" -C /usr/local/bin && \
-    rm "geckodriver-${GECKODRIVER_VERSION}-linux64.tar.gz" && \
+# Определяем архитектуру и устанавливаем geckodriver
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "aarch64" ]; then \
+        GECKO_ARCH="linux-aarch64"; \
+    elif [ "$ARCH" = "x86_64" ]; then \
+        GECKO_ARCH="linux64"; \
+    else \
+        echo "Unsupported architecture: $ARCH" && exit 1; \
+    fi && \
+    GECKODRIVER_VERSION=$(curl -s https://api.github.com/repos/mozilla/geckodriver/releases/latest | grep -Po '"tag_name": "\K.*?(?=")') && \
+    echo "Downloading geckodriver ${GECKODRIVER_VERSION} for ${GECKO_ARCH}" && \
+    wget -q "https://github.com/mozilla/geckodriver/releases/download/${GECKODRIVER_VERSION}/geckodriver-${GECKODRIVER_VERSION}-${GECKO_ARCH}.tar.gz" && \
+    tar -xzf "geckodriver-${GECKODRIVER_VERSION}-${GECKO_ARCH}.tar.gz" -C /usr/local/bin && \
+    rm "geckodriver-${GECKODRIVER_VERSION}-${GECKO_ARCH}.tar.gz" && \
     chmod +x /usr/local/bin/geckodriver
 
 # Создание рабочей директории
@@ -44,6 +49,5 @@ USER botuser
 ENV MOZ_HEADLESS=1
 ENV DISPLAY=:99
 
-# Запуск бота
-CMD ["python", "main.py"]
- 
+# Запуск Xvfb в фоне и затем бота
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 & python main.py"]
