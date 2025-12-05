@@ -16,7 +16,7 @@ from statemachine.exceptions import TransitionNotAllowed
 
 LOGIN = "Player_1369417"
 PASSWORD = "688025"
-MOB = "Бандит"
+MOB = "Чумовой гриб".lower()
 REGEX = r"\p{L}+"
 TIMEOUT = 30
 
@@ -43,7 +43,10 @@ def is_msg_window() -> bool:
 
 def is_daily_msg_window() -> bool:
     try:
-        driver.find_element(By.XPATH, "//div[@class='text_msg_quest']")
+        driver.find_element(
+            By.XPATH,
+            "//div[@class='msgQuests']/table/tbody/tr/td/div/table/tbody/tr/td/div[@class='button_alt_01']"
+        )
         return True
     except NoSuchElementException:
         return False
@@ -120,10 +123,10 @@ def close_msg():
 
 def close_daily_msg():
     try:
-        wait.until(EC.visibility_of_element_located((By.XPATH, "//div[@class='text_msg_quest']")))
-        driver.execute_script(
-            "hideMsgQuests(); showContent('/quests/quests.php?num=0&amp;pos=0&amp;otvet=3&amp;sluch=0');"
-        )
+        wait.until(EC.element_to_be_clickable((
+            By.XPATH,
+            "//div[@class='msgQuests']/table/tbody/tr/td/div/table/tbody/tr/td/div[@class='button_alt_01']"
+        ))).click()
     except TimeoutException:
         pass
 
@@ -141,7 +144,7 @@ def choose_mob():
         wait.until(EC.visibility_of_element_located((By.XPATH, "//img[@src='/mmoqimage/icond_1/powerHD.png']")))
         mobs = driver.find_elements(By.CLASS_NAME, "attackButtons")
         for i in range(len(mobs)):
-            mob_name = ' '.join(regex.findall(REGEX, mobs[i].text))
+            mob_name = ' '.join(regex.findall(REGEX, mobs[i].text)).lower()
             if mob_name == MOB:
                 mobs[i + 1].click()
 
