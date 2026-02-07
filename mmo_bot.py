@@ -1,11 +1,12 @@
 import regex
 import time
+import os
+import sys
 from random import uniform
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import (ElementClickInterceptedException, TimeoutException, NoSuchElementException,
@@ -15,11 +16,44 @@ from statemachine.transition_list import TransitionList
 from statemachine.exceptions import TransitionNotAllowed
 
 
-LOGIN = "Player_1369417"
-PASSWORD = "688025"
-MOB = "Чумовой гриб".lower()
+def get_required_env(var_name: str) -> str:
+    """Get a required environment variable"""
+    value = os.getenv(var_name)
+    if not value:
+        print(f"ERROR: variable {var_name} is not set!")
+        print(f"Create a .env file and add: {var_name}=your_value")
+        sys.exit(78)  # EX_CONFIG - конфигурационная ошибка, не перезапускать
+    
+    placeholder_values = [
+        'ваш_логин', 'your_login', 'ваш_пароль', 'your_password',
+        'твой_логин', 'твой_пароль', 'player_xxx', 'password',
+        'логин', 'пароль', 'login', 'pass', '<your_login>', '<your_password>'
+    ]
+    
+    if value.lower() in placeholder_values:
+        print(f"ERROR: variable {var_name} contains a placeholder value '{value}'!")
+        print(f"Replace '{value}' with real data")
+        print(f"Example: {var_name}=Player_123456")
+        sys.exit(78)  # EX_CONFIG - конфигурационная ошибка, не перезапускать
+    
+    return value
+
+
+
+print("Checking settings...")
+LOGIN = get_required_env("LOGIN")
+PASSWORD = get_required_env("PASSWORD")
+MOB = get_required_env("MOB").lower()
+TIMEOUT = int(os.getenv("TIMEOUT", "30"))
+
+print(f"Settings loaded:")
+print(f"   Login: {LOGIN}")
+print(f"   Password: {'*' * (len(PASSWORD) - 1) + PASSWORD[-1]}")
+print(f"   MOB: {MOB}")
+print(f"   Timeout: {TIMEOUT}s")
+print()
+
 REGEX = r"\p{L}+"
-TIMEOUT = 30
 
 
 def is_error_page() -> bool:
@@ -197,12 +231,10 @@ class MMOBOT(StateMachine, strict_states=True):
 
 if __name__ == "__main__":
     options = Options()
-    # options.add_argument("--headless")
+    options.add_argument("--headless")
     options.set_preference("media.volume_scale", "0.0")
-
-    # Явно указываем путь к geckodriver для обхода Selenium Manager (для ARCH архитектуры)
-    service = Service(executable_path="/usr/local/bin/geckodriver")
-    driver = webdriver.Firefox(service=service, options=options)
+    
+    driver = webdriver.Firefox(options=options)
 
     wait = WebDriverWait(driver, 10, 1)
 
