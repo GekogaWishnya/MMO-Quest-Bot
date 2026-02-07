@@ -1,0 +1,19 @@
+# Python виртуальное окружение
+.venv/
+lib/
+bin/
+venv/
+include/
+__pycache__/
+*.pyc
+*.cfg
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+volumes/
+
+# Логи
+*.log

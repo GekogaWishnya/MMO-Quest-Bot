@@ -1,0 +1,9 @@
+services:
+  mmo-bot:
+    image: pulsarbf/mmo-bot:latest
+    container_name: mmo-quest-bot
+    restart: on-failure:5
+    env_file:
+      - .env
+    environment:
+      - TZ=Europe/Moscow
