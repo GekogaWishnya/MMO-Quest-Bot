@@ -15,5 +15,8 @@ Thumbs.db
 # Docker
 volumes/
 
+#файлы ботов
+bots/*
+
 # Логи
 *.log
